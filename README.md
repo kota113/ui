@@ -14,12 +14,10 @@
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g bna
+# The fastest way to set up BNA UI in your Expo project:
+npx bna-ui init
 
-# Create a new project
-bna init my-awesome-app
+# Add components
+npx bna-ui add button
 
-# Or create with
-npx bna init my-app
 ```
