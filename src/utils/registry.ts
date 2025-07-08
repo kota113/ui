@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs-extra';
-import { ComponentRegistry } from '../templates/registry/schema/index.js';
+import { ComponentRegistry } from '../registry/schema/index.js';
 import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);

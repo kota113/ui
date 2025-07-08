@@ -8,7 +8,7 @@ import { logger } from './utils/logger.js';
 const program = new Command();
 
 program
-  .name('bna')
+  .name('bna-ui')
   .description('BNA - Expo React Native UI, CLI Library')
   .version('1.0.0');
 

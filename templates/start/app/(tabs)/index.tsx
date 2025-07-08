@@ -80,7 +80,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.codeBlock}>
             <Text variant='caption' style={styles.bashCommand}>
-              npx bna add avatar
+              npx bna-ui add avatar
             </Text>
           </View>
           <Text variant='caption' style={styles.installDescription}>

@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "bna-ui",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "BNA - Expo React Native UI, CLI Library",
   "main": "dist/index.js",
   "bin": {
-    "bna": "bin/bna.js"
+    "bna-ui": "bin/bna-ui.js"
   },
   "scripts": {
     "build": "npm run clean && tsc && npm run copy-templates && npm run copy-registry",

@@ -1,7 +1,7 @@
 // src/utils/dependencies.ts
 import { execSync } from 'child_process';
 import ora from 'ora';
-import { ComponentDependency } from '../templates/registry/schema/index.js';
+import { ComponentDependency } from '../registry/schema/index.js';
 import { PackageManager } from './package-manager.js';
 import { logger } from './logger.js';
 import path from 'path';
