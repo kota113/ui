@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "bna-ui",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "BNA - Expo React Native UI, CLI Library",
   "main": "dist/index.js",
@@ -24,11 +24,10 @@
   "keywords": [
     "react-native",
     "expo",
-    "cli",
-    "template",
-    "starter",
     "ui",
-    "boilerplate",
+    "cli",
+    "starter",
+    "template",
     "typescript"
   ],
   "author": "Ahmed BNA <hi@ahmedbna.com>",
@@ -40,7 +39,7 @@
   "bugs": {
     "url": "https://github.com/ahmedbna/ui/issues"
   },
-  "homepage": "https://github.com/ahmedbna/ui#readme",
+  "homepage": "https://ui.ahmedbna.com/",
   "files": [
     "dist/**/*",
     "templates/**/*",

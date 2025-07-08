@@ -101,7 +101,11 @@ export async function addCommand(
       REGISTRY
     );
 
-    if (conflicts.length > 0 && !options.overwrite) {
+    // Handle conflicts more granularly
+    let componentsToSkip = new Set<string>();
+    let shouldOverwriteAll = options.overwrite || false;
+
+    if (conflicts.length > 0 && !shouldOverwriteAll) {
       logger.warn('The following files already exist:');
       conflicts.forEach(({ component, files }) => {
         logger.plain(`  ${component}:`);
@@ -109,30 +113,110 @@ export async function addCommand(
       });
 
       if (!options.yes) {
-        const { shouldContinue } = await inquirer.prompt([
+        const { overwriteChoice } = await inquirer.prompt([
           {
-            type: 'confirm',
-            name: 'shouldContinue',
-            message: 'Do you want to overwrite existing files?',
-            default: false,
+            type: 'list',
+            name: 'overwriteChoice',
+            message: 'How would you like to handle existing files?',
+            choices: [
+              { name: 'Overwrite all existing files', value: 'overwrite-all' },
+              {
+                name: 'Skip components with existing files',
+                value: 'skip-conflicts',
+              },
+              {
+                name: 'Choose for each component individually',
+                value: 'individual',
+              },
+              { name: 'Cancel operation', value: 'cancel' },
+            ],
+            default: 'skip-conflicts',
           },
         ]);
 
-        if (!shouldContinue) {
+        if (overwriteChoice === 'cancel') {
           logger.info('Operation cancelled');
           process.exit(0);
-        }
-      }
+        } else if (overwriteChoice === 'overwrite-all') {
+          shouldOverwriteAll = true;
+        } else if (overwriteChoice === 'individual') {
+          // Ask for each conflicting component individually
+          for (const conflict of conflicts) {
+            const { shouldOverwrite } = await inquirer.prompt([
+              {
+                type: 'confirm',
+                name: 'shouldOverwrite',
+                message: `Overwrite files for component "${conflict.component}"?`,
+                default: false,
+              },
+            ]);
 
-      options.overwrite = true;
+            if (!shouldOverwrite) {
+              componentsToSkip.add(conflict.component);
+            }
+          }
+        } else if (overwriteChoice === 'skip-conflicts') {
+          // Skip all conflicting components
+          conflicts.forEach(({ component }) => {
+            componentsToSkip.add(component);
+          });
+        }
+      } else {
+        // If --yes flag is used, skip conflicting components by default
+        conflicts.forEach(({ component }) => {
+          componentsToSkip.add(component);
+        });
+      }
+    }
+
+    // Filter out components to skip
+    const finalComponentsToInstall = Array.from(allComponentsToInstall).filter(
+      (comp) => !componentsToSkip.has(comp)
+    );
+
+    // Also filter out dependencies of skipped components
+    const finalHookDependencies = Array.from(allHookDependencies).filter(
+      (hook) => {
+        // Check if this hook is only needed by skipped components
+        const needingComponents = Array.from(allComponentsToInstall).filter(
+          (comp) => {
+            const component = getComponent(comp);
+            return component && (component.hooks || []).includes(hook);
+          }
+        );
+        return needingComponents.some((comp) => !componentsToSkip.has(comp));
+      }
+    );
+
+    const finalThemeDependencies = Array.from(allThemeDependencies).filter(
+      (theme) => {
+        // Check if this theme is only needed by skipped components
+        const needingComponents = Array.from(allComponentsToInstall).filter(
+          (comp) => {
+            const component = getComponent(comp);
+            return component && (component.theme || []).includes(theme);
+          }
+        );
+        return needingComponents.some((comp) => !componentsToSkip.has(comp));
+      }
+    );
+
+    // Show what will be installed vs skipped
+    if (componentsToSkip.size > 0) {
+      logger.info(
+        `Skipping components: ${Array.from(componentsToSkip).join(', ')}`
+      );
+    }
+
+    if (finalComponentsToInstall.length === 0) {
+      logger.warn('No components to install after handling conflicts');
+      process.exit(0);
     }
 
     // Show dry run information
     if (options.dryRun) {
       logger.info('Dry run - would install the following:');
-      logger.plain(
-        `Components: ${Array.from(allComponentsToInstall).join(', ')}`
-      );
+      logger.plain(`Components: ${finalComponentsToInstall.join(', ')}`);
 
       if (allPackageDependencies.size > 0) {
         logger.plain(
@@ -142,22 +226,26 @@ export async function addCommand(
         );
       }
 
-      if (allHookDependencies.size > 0) {
+      if (finalHookDependencies.length > 0) {
+        logger.plain(`Hook dependencies: ${finalHookDependencies.join(', ')}`);
+      }
+
+      if (finalThemeDependencies.length > 0) {
         logger.plain(
-          `Hook dependencies: ${Array.from(allHookDependencies).join(', ')}`
+          `Theme dependencies: ${finalThemeDependencies.join(', ')}`
         );
       }
 
-      if (allThemeDependencies.size > 0) {
+      if (componentsToSkip.size > 0) {
         logger.plain(
-          `Theme dependencies: ${Array.from(allThemeDependencies).join(', ')}`
+          `Skipped components: ${Array.from(componentsToSkip).join(', ')}`
         );
       }
 
       return;
     }
 
-    // Install package dependencies
+    // Install package dependencies (these are still needed for non-skipped components)
     const packageDepsArray = Array.from(allPackageDependencies);
     const missingPackageDeps = checkExistingDependencies(
       packageDepsArray,
@@ -176,30 +264,28 @@ export async function addCommand(
     }
 
     // Install hook dependencies
-    await installHookDependencies(
-      Array.from(allHookDependencies),
-      projectPath,
-      options
-    );
+    await installHookDependencies(finalHookDependencies, projectPath, {
+      ...options,
+      overwrite: shouldOverwriteAll,
+    });
 
     // Install theme dependencies
-    await installThemeDependencies(
-      Array.from(allThemeDependencies),
-      projectPath,
-      options
-    );
+    await installThemeDependencies(finalThemeDependencies, projectPath, {
+      ...options,
+      overwrite: shouldOverwriteAll,
+    });
 
     // Install components
     const spinner = ora('Installing components...').start();
     const installedComponents: string[] = [];
 
     try {
-      for (const componentName of Array.from(allComponentsToInstall)) {
+      for (const componentName of finalComponentsToInstall) {
         const component = getComponent(componentName);
         if (!component) continue;
 
         await installComponent(component, projectPath, {
-          overwrite: options.overwrite,
+          overwrite: shouldOverwriteAll,
           dryRun: false,
         });
 
@@ -216,15 +302,35 @@ export async function addCommand(
     await updateComponentsIndex(projectPath, installedComponents);
 
     // Show success message
-    logger.success(`Successfully added ${components.length} component(s):`);
-    components.forEach((name) => logger.plain(`  ✓ ${name}`));
+    const successfullyRequestedComponents = components.filter(
+      (comp) => !componentsToSkip.has(comp)
+    );
 
-    if (installedComponents.length > components.length) {
+    if (successfullyRequestedComponents.length > 0) {
+      logger.success(
+        `Successfully added ${successfullyRequestedComponents.length} component(s):`
+      );
+      successfullyRequestedComponents.forEach((name) =>
+        logger.plain(`  ✓ ${name}`)
+      );
+    }
+
+    if (installedComponents.length > successfullyRequestedComponents.length) {
       const additionalComponents = installedComponents.filter(
-        (name) => !components.includes(name)
+        (name) => !successfullyRequestedComponents.includes(name)
       );
       logger.info(
         `Also installed dependencies: ${additionalComponents.join(', ')}`
+      );
+    }
+
+    if (componentsToSkip.size > 0) {
+      logger.warn(
+        `Skipped ${
+          componentsToSkip.size
+        } component(s) due to existing files: ${Array.from(
+          componentsToSkip
+        ).join(', ')}`
       );
     }
 
@@ -301,6 +407,9 @@ async function installHookDependencies(
           logger.info(`Skipping hook: ${hookName}`);
           continue;
         }
+      } else {
+        logger.info(`Skipping existing hook: ${hookName}`);
+        continue;
       }
     }
 
@@ -344,6 +453,9 @@ async function installThemeDependencies(
           logger.info(`Skipping theme: ${themeName}`);
           continue;
         }
+      } else {
+        logger.info(`Skipping existing theme: ${themeName}`);
+        continue;
       }
     }
 
