@@ -18,6 +18,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react"
   },
-  "include": ["src/**/*", "templates"],
-  "exclude": ["node_modules", "dist", "templates"]
+  "include": ["src/**/*", "src/templates"],
+  "exclude": ["node_modules", "dist", "src/templates"]
 }
