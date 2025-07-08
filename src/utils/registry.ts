@@ -2,26 +2,58 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { ComponentRegistry, ComponentDependency } from '../registry/schema.js';
-import {
-  readFile,
-  writeFile,
-  fileExists,
-  createDirectory,
-} from './filesystem.js';
+import fs from 'fs-extra';
+import { ComponentRegistry } from '../templates/registry/schema/index.js';
 import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+export async function validateProjectStructure(
+  projectPath: string
+): Promise<boolean> {
+  const requiredFiles = ['package.json'];
+
+  for (const file of requiredFiles) {
+    const filePath = path.join(projectPath, file);
+    if (!(await fs.pathExists(filePath))) {
+      logger.error(`Required file not found: ${file}`);
+      return false;
+    }
+  }
+
+  // Check if it's a React Native/Expo project
+  try {
+    const packageJsonPath = path.join(projectPath, 'package.json');
+    const packageJson = await fs.readJson(packageJsonPath);
+
+    const hasReactNative =
+      packageJson.dependencies?.['react-native'] ||
+      packageJson.devDependencies?.['react-native'];
+    const hasExpo =
+      packageJson.dependencies?.['expo'] ||
+      packageJson.devDependencies?.['expo'];
+
+    if (!hasReactNative && !hasExpo) {
+      logger.error("This doesn't appear to be a React Native or Expo project");
+      return false;
+    }
+  } catch (error) {
+    logger.error('Failed to validate project structure:', error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function getComponentTemplate(filePath: string): Promise<string> {
   const templatePath = path.resolve(__dirname, '../../', filePath);
 
-  if (!(await fileExists(templatePath))) {
+  if (!(await fs.pathExists(templatePath))) {
     throw new Error(`Template file not found: ${filePath}`);
   }
 
-  return await readFile(templatePath);
+  return await fs.readFile(templatePath, 'utf8');
 }
 
 export async function installComponent(
@@ -38,8 +70,8 @@ export async function installComponent(
   const existingFiles: string[] = [];
 
   for (const file of component.files) {
-    const filePath = path.join(targetPath, file.target || file.path);
-    if (await fileExists(filePath)) {
+    const filePath = path.join(targetPath, file.target);
+    if (await fs.pathExists(filePath)) {
       existingFiles.push(filePath);
     }
   }
@@ -58,8 +90,7 @@ export async function installComponent(
       `Dry run - would install ${component.name} with the following files:`
     );
     component.files.forEach((file) => {
-      const targetFile = file.target || file.path;
-      logger.plain(`  ${targetFile}`);
+      logger.plain(`  ${file.target}`);
     });
     return;
   }
@@ -67,54 +98,20 @@ export async function installComponent(
   // Install component files
   for (const file of component.files) {
     try {
-      await installComponentFile(component);
+      const sourcePath = path.resolve(__dirname, '../../', file.path);
+      const targetFilePath = path.join(targetPath, file.target);
+
+      // Ensure target directory exists
+      await fs.ensureDir(path.dirname(targetFilePath));
+
+      // Copy file
+      await fs.copy(sourcePath, targetFilePath);
+      logger.success(`Added ${file.target}`);
     } catch (error) {
-      logger.error(`Failed to install ${file.target || file.path}:`, error);
+      logger.error(`Failed to install ${file.target}:`, error);
       throw error;
     }
   }
-}
-
-async function installComponentFile(
-  component: ComponentRegistry
-): Promise<void> {
-  const targetFilePath = `components/ui/${component.name}.tsx`;
-
-  const filePath = path.resolve(
-    __dirname,
-    `../../templates/components/ui/${component.name}.tsx`
-  );
-
-  // Get the template content
-  const templateContent = await getComponentTemplate(filePath);
-
-  // Process template with any necessary replacements
-  const processedContent = processTemplate(templateContent, {
-    componentName: component.name,
-    // Add other template variables as needed
-  });
-
-  // Ensure the target directory exists
-  await createDirectory(path.dirname(targetFilePath));
-
-  // Write the processed content to the target file
-  await writeFile(targetFilePath, processedContent);
-  logger.success(`Added ${component.name}`);
-}
-
-function processTemplate(
-  template: string,
-  variables: Record<string, string>
-): string {
-  let processed = template;
-
-  // Replace template variables
-  Object.entries(variables).forEach(([key, value]) => {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    processed = processed.replace(regex, value);
-  });
-
-  return processed;
 }
 
 export function resolveComponentDependencies(
@@ -156,60 +153,6 @@ export function resolveComponentDependencies(
   return resolved;
 }
 
-export function convertDependenciesToComponentDependencies(
-  dependencies: string[]
-): ComponentDependency[] {
-  return dependencies.map((dep) => {
-    // Handle version specifications
-    if (dep.includes('@')) {
-      const parts = dep.split('@');
-      const name = parts.slice(0, -1).join('@'); // Handle scoped packages
-      const version = parts[parts.length - 1];
-      return { name, version };
-    }
-
-    // Default to latest version
-    return { name: dep, version: 'latest' };
-  });
-}
-
-export async function validateProjectStructure(
-  projectPath: string
-): Promise<boolean> {
-  const requiredFiles = ['package.json', 'app.json'];
-
-  for (const file of requiredFiles) {
-    const filePath = path.join(projectPath, file);
-    if (!(await fileExists(filePath))) {
-      logger.error(`Required file not found: ${file}`);
-      return false;
-    }
-  }
-
-  // Check if it's a React Native/Expo project
-  try {
-    const packageJsonPath = path.join(projectPath, 'package.json');
-    const packageJson = JSON.parse(await readFile(packageJsonPath));
-
-    const hasReactNative =
-      packageJson.dependencies?.['react-native'] ||
-      packageJson.devDependencies?.['react-native'];
-    const hasExpo =
-      packageJson.dependencies?.['expo'] ||
-      packageJson.devDependencies?.['expo'];
-
-    if (!hasReactNative && !hasExpo) {
-      logger.error("This doesn't appear to be a React Native or Expo project");
-      return false;
-    }
-  } catch (error) {
-    logger.error('Failed to validate project structure:', error);
-    return false;
-  }
-
-  return true;
-}
-
 export async function updateComponentsIndex(
   projectPath: string,
   components: string[]
@@ -218,10 +161,10 @@ export async function updateComponentsIndex(
 
   try {
     // Ensure components/ui directory exists
-    await createDirectory(path.dirname(indexPath));
+    await fs.ensureDir(path.dirname(indexPath));
 
     // Check if index file exists
-    const indexExists = await fileExists(indexPath);
+    const indexExists = await fs.pathExists(indexPath);
 
     if (!indexExists) {
       // Create new index file
@@ -229,11 +172,11 @@ export async function updateComponentsIndex(
         .map((name) => `export * from './${name}';`)
         .join('\n');
 
-      await writeFile(indexPath, exports + '\n');
+      await fs.writeFile(indexPath, exports + '\n');
       logger.success('Created components/ui/index.ts');
     } else {
       // Read existing index file
-      const existingContent = await readFile(indexPath);
+      const existingContent = await fs.readFile(indexPath, 'utf8');
 
       // Add new exports that don't already exist
       const newExports: string[] = [];
@@ -248,7 +191,7 @@ export async function updateComponentsIndex(
       if (newExports.length > 0) {
         const updatedContent =
           existingContent + '\n' + newExports.join('\n') + '\n';
-        await writeFile(indexPath, updatedContent);
+        await fs.writeFile(indexPath, updatedContent);
         logger.success('Updated components/ui/index.ts');
       }
     }
@@ -259,7 +202,8 @@ export async function updateComponentsIndex(
 
 export async function checkComponentConflicts(
   components: string[],
-  projectPath: string
+  projectPath: string,
+  registry: Record<string, ComponentRegistry>
 ): Promise<{
   conflicts: Array<{
     component: string;
@@ -272,17 +216,16 @@ export async function checkComponentConflicts(
   }> = [];
 
   for (const componentName of components) {
-    const component = getComponent(componentName);
+    const component = registry[componentName];
     if (!component) continue;
 
     const conflictingFiles: string[] = [];
 
     for (const file of component.files) {
-      const targetPath = file.target || file.path;
-      const fullPath = path.join(projectPath, targetPath);
+      const fullPath = path.join(projectPath, file.target);
 
-      if (await fileExists(fullPath)) {
-        conflictingFiles.push(targetPath);
+      if (await fs.pathExists(fullPath)) {
+        conflictingFiles.push(file.target);
       }
     }
 
@@ -298,23 +241,22 @@ export async function checkComponentConflicts(
 }
 
 export function getComponentsByType(
-  type: 'registry:ui' | 'registry:example'
+  type: 'registry:ui' | 'registry:example',
+  registry: Record<string, ComponentRegistry>
 ): ComponentRegistry[] {
-  return Object.values(REGISTRY)
+  return Object.values(registry)
     .filter((comp) => comp.type === type)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function getComponentExamples(
-  componentName: string
+  componentName: string,
+  registry: Record<string, ComponentRegistry>
 ): ComponentRegistry[] {
-  return Object.values(REGISTRY)
+  return Object.values(registry)
     .filter(
       (comp) =>
         comp.type === 'registry:example' && comp.name.startsWith(componentName)
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 }
-
-// Import the registry - this assumes it's properly exported
-import { REGISTRY, getComponent } from '../registry/index.js';

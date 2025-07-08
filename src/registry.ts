@@ -1,3 +1,5 @@
+// src/registry.ts
+
 import { ComponentRegistry } from './templates/registry/schema/index.js';
 
 // Import all component registries
@@ -107,21 +109,7 @@ export const REGISTRY: Record<string, ComponentRegistry> = {
   ...hooksRegistry,
 };
 
-// Component categories for organization
-export const COMPONENT_CATEGORIES = {
-  ui: 'UI Components',
-  layout: 'Layout Components',
-  form: 'Form Components',
-  media: 'Media Components',
-  navigation: 'Navigation Components',
-  feedback: 'Feedback Components',
-  data: 'Data Display Components',
-  other: 'Other Components',
-} as const;
-
-export type ComponentCategory = keyof typeof COMPONENT_CATEGORIES;
-
-// Helper functions for component registry
+/// Helper functions for component registry
 export function getComponent(name: string): ComponentRegistry | undefined {
   return REGISTRY[name];
 }
@@ -158,19 +146,6 @@ export function searchComponents(query: string): ComponentRegistry[] {
       // Finally sort alphabetically
       return a.name.localeCompare(b.name);
     });
-}
-
-export function getComponentsByCategory(category: string): ComponentRegistry[] {
-  return Object.values(REGISTRY)
-    .filter((comp) => comp.type === 'registry:ui' && comp.category === category)
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export function getComponentDependencies(name: string): string[] {
-  const component = getComponent(name);
-  if (!component) return [];
-
-  return component.registryDependencies || [];
 }
 
 export function resolveAllDependencies(name: string): string[] {
@@ -222,53 +197,5 @@ export function getComponentInfo(name: string): {
     dependencies,
     allDependencies,
     packageDependencies,
-  };
-}
-
-export function validateRegistryIntegrity(): {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
-} {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  Object.entries(REGISTRY).forEach(([key, component]) => {
-    // Check if component name matches key
-    if (component.name !== key) {
-      errors.push(
-        `Component key "${key}" doesn't match component name "${component.name}"`
-      );
-    }
-
-    // Check if registry dependencies exist
-    component.registryDependencies?.forEach((dep) => {
-      if (!REGISTRY[dep]) {
-        errors.push(
-          `Component "${key}" depends on non-existent component "${dep}"`
-        );
-      }
-    });
-
-    // Check if component has files
-    if (!component.files || component.files.length === 0) {
-      warnings.push(`Component "${key}" has no files defined`);
-    }
-
-    // Check if component has description
-    if (!component.description) {
-      warnings.push(`Component "${key}" has no description`);
-    }
-
-    // Check if component has category
-    if (!component.category) {
-      warnings.push(`Component "${key}" has no category`);
-    }
-  });
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
   };
 }
