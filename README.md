@@ -1,6 +1,6 @@
 # BNA UI 🚀
 
-![BNA UI Header](https://bna-ui.s3.eu-north-1.amazonaws.com/bna-ui-header.png)
+![BNA UI Header](https://cdn.jsdelivr.net/gh/ahmedbna/bna-ui-demo/bna-ui-header.png)
 
 **B**uild **N**ative **A**pps - A powerful CLI for creating Expo React Native applications with a beautiful UI component library.
 
@@ -31,22 +31,6 @@ npx bna-ui add button
 npx bna-ui add card
 npx bna-ui add input
 ```
-
-## 🎨 Available Components
-
-| Component      | Description                       | Status         |
-| -------------- | --------------------------------- | -------------- |
-| `Button`       | Customizable button with variants | ✅ Available   |
-| `Card`         | Container component with shadow   | ✅ Available   |
-| `Input`        | Text input with validation        | ✅ Available   |
-| `Bottom Sheet` | Overlay modal component           | ✅ Available   |
-| `Spinner`      | Loading spinner and skeletons     | ✅ Available   |
-| `Avatar`       | User profile image component      | ✅ Available   |
-| `Badge`        | Small status indicator            | ✅ Available   |
-| `Date Picker`  | Date Picker component             | ✅ Available   |
-| `Switch`       | Toggle switch component           | ✅ Available   |
-| `Progress`     | Range progress component          | ✅ Available   |
-| `Charts`       | Charts components.                | 🔄 Coming Soon |
 
 ## 🎯 Usage Example
 

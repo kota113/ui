@@ -1,8 +1,8 @@
 export interface ComponentDependency {
   name: string;
   version: string;
+  dev?: boolean;
 }
-
 export interface ComponentFile {
   type: string;
   path: string;

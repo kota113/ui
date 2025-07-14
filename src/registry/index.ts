@@ -54,6 +54,8 @@ import { viewRegistry } from './view.js';
 import { separatorRegistry } from './separator.js';
 import { themeRegistry } from './theme/index.js';
 import { hooksRegistry } from './hooks/index.js';
+import { inputRegistry } from './input.js';
+import { chartsRegistry } from './charts/index.js';
 
 export const REGISTRY: Record<string, ComponentRegistry> = {
   ...accordionRegistry,
@@ -81,6 +83,7 @@ export const REGISTRY: Record<string, ComponentRegistry> = {
   ...iconRegistry,
   ...imageRegistry,
   ...inputOtpRegistry,
+  ...inputRegistry,
   ...linkRegistry,
   ...mediaPickerRegistry,
   ...modeToggleRegistry,
@@ -105,8 +108,9 @@ export const REGISTRY: Record<string, ComponentRegistry> = {
   ...videoRegistry,
   ...viewRegistry,
   ...separatorRegistry,
-  ...themeRegistry,
   ...hooksRegistry,
+  ...themeRegistry,
+  ...chartsRegistry,
 };
 
 /// Helper functions for component registry

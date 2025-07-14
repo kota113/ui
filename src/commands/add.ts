@@ -299,7 +299,7 @@ export async function addCommand(
     }
 
     // Update components index
-    await updateComponentsIndex(projectPath, installedComponents);
+    // await updateComponentsIndex(projectPath, installedComponents);
 
     // Show success message
     const successfullyRequestedComponents = components.filter(
