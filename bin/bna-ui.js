@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
-import { execSync } from 'child_process';
-import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path, { dirname } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +18,9 @@ if (!fs.existsSync(distPath)) {
 
 // Import and execute the built CLI module
 try {
-  await import(distPath);
+  // Convert file path to file URL for proper ES module import
+  const fileUrl = pathToFileURL(distPath).href;
+  await import(fileUrl);
 } catch (error) {
   console.error('❌ Failed to start CLI:', error.message);
   process.exit(1);
