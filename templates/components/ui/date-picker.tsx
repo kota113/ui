@@ -727,6 +727,8 @@ export function DatePicker(props: DatePickerProps) {
             </Text>
             <ScrollView
               showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+              scrollEventThrottle={16}
               contentContainerStyle={{
                 paddingVertical: 20,
               }}
@@ -789,6 +791,8 @@ export function DatePicker(props: DatePickerProps) {
             </Text>
             <ScrollView
               showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+              scrollEventThrottle={16}
               contentContainerStyle={{
                 paddingVertical: 20,
               }}
@@ -892,6 +896,8 @@ export function DatePicker(props: DatePickerProps) {
     <View style={{ height: 300 }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingVertical: 20,
         }}
@@ -932,6 +938,8 @@ export function DatePicker(props: DatePickerProps) {
     <View style={{ height: 300 }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingVertical: 20,
         }}
@@ -1092,7 +1100,8 @@ export function DatePicker(props: DatePickerProps) {
           setShowYearPicker(false);
         }}
         title={getBottomSheetTitle()}
-        snapPoints={[0.7]}
+        snapPoints={[0.6]}
+        disablePanGesture={showMonthPicker || showYearPicker}
       >
         <View style={{ flex: 1 }}>
           {getBottomSheetContent()}
