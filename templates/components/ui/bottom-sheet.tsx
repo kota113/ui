@@ -32,6 +32,7 @@ type BottomSheetContentProps = {
   rBottomSheetStyle: any;
   cardColor: string;
   mutedColor: string;
+  onHandlePress?: () => void;
 };
 
 // Component for the bottom sheet content
@@ -42,6 +43,7 @@ const BottomSheetContent = ({
   rBottomSheetStyle,
   cardColor,
   mutedColor,
+  onHandlePress,
 }: BottomSheetContentProps) => {
   return (
     <Animated.View
@@ -59,17 +61,25 @@ const BottomSheetContent = ({
         style,
       ]}
     >
-      {/* Handle */}
-      <View
-        style={{
-          width: 64,
-          height: 6,
-          backgroundColor: mutedColor,
-          alignSelf: 'center',
-          marginTop: 8,
-          borderRadius: 999,
-        }}
-      />
+      {/* Handle - Touchable to allow snapping when pan is disabled */}
+      <TouchableWithoutFeedback onPress={onHandlePress}>
+        <View
+          style={{
+            width: '100%',
+            paddingVertical: 12,
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 64,
+              height: 6,
+              backgroundColor: mutedColor,
+              borderRadius: 999,
+            }}
+          />
+        </View>
+      </TouchableWithoutFeedback>
 
       {/* Title */}
       {title && (
@@ -119,6 +129,7 @@ export function BottomSheet({
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
   const opacity = useSharedValue(0);
+  const currentSnapIndex = useSharedValue(0);
 
   // Convert snap points to actual heights
   const snapPointsHeights = snapPoints.map((point) => -SCREEN_HEIGHT * point);
@@ -135,6 +146,8 @@ export function BottomSheet({
         stiffness: 400,
       });
       opacity.value = withTiming(1, { duration: 300 });
+      // Reset to first snap point when opening
+      currentSnapIndex.value = 0;
     } else {
       // Animate slide down before closing modal
       translateY.value = withSpring(0, {
@@ -161,16 +174,29 @@ export function BottomSheet({
     'worklet';
     let closest = snapPointsHeights[0];
     let minDistance = Math.abs(currentY - closest);
+    let closestIndex = 0;
 
-    for (const snapPoint of snapPointsHeights) {
+    for (let i = 0; i < snapPointsHeights.length; i++) {
+      const snapPoint = snapPointsHeights[i];
       const distance = Math.abs(currentY - snapPoint);
       if (distance < minDistance) {
         minDistance = distance;
         closest = snapPoint;
+        closestIndex = i;
       }
     }
 
+    // Update the current snap index
+    currentSnapIndex.value = closestIndex;
     return closest;
+  };
+
+  // Function to cycle through snap points when handle is pressed
+  const handlePress = () => {
+    // Move to the next snap point (cycle back to first if at the end)
+    const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
+    currentSnapIndex.value = nextIndex;
+    scrollTo(snapPointsHeights[nextIndex]);
   };
 
   const animateClose = () => {
@@ -193,11 +219,8 @@ export function BottomSheet({
     })
     .onUpdate((event) => {
       const newY = context.value.y + event.translationY;
-      // Only allow dragging down when near the top of the sheet or when dragging up
-      // This helps prevent interference with nested ScrollViews
-      const shouldUpdate = event.translationY > 0 || translateY.value > -SCREEN_HEIGHT * 0.1;
-      
-      if (shouldUpdate && newY <= 0 && newY >= MAX_TRANSLATE_Y) {
+      // Limit the dragging range
+      if (newY <= 0 && newY >= MAX_TRANSLATE_Y) {
         translateY.value = newY;
       }
     })
@@ -214,8 +237,7 @@ export function BottomSheet({
       // Find the closest snap point
       const closestSnapPoint = findClosestSnapPoint(currentY);
       scrollTo(closestSnapPoint);
-    })
-    .simultaneousWithExternalGesture();
+    });
 
   const rBottomSheetStyle = useAnimatedStyle(() => {
     return {
@@ -266,6 +288,7 @@ export function BottomSheet({
               rBottomSheetStyle={rBottomSheetStyle}
               cardColor={cardColor}
               mutedColor={mutedColor}
+              onHandlePress={() => runOnJS(handlePress)()}
             />
           ) : (
             <GestureDetector gesture={gesture}>
@@ -276,6 +299,7 @@ export function BottomSheet({
                 rBottomSheetStyle={rBottomSheetStyle}
                 cardColor={cardColor}
                 mutedColor={mutedColor}
+                onHandlePress={() => runOnJS(handlePress)()}
               />
             </GestureDetector>
           )}
