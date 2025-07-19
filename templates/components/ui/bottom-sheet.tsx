@@ -25,6 +25,73 @@ import Animated, {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
 
+type BottomSheetContentProps = {
+  children: React.ReactNode;
+  title?: string;
+  style?: ViewStyle;
+  rBottomSheetStyle: any;
+  cardColor: string;
+  mutedColor: string;
+};
+
+// Component for the bottom sheet content
+const BottomSheetContent = ({
+  children,
+  title,
+  style,
+  rBottomSheetStyle,
+  cardColor,
+  mutedColor,
+}: BottomSheetContentProps) => {
+  return (
+    <Animated.View
+      style={[
+        {
+          height: SCREEN_HEIGHT,
+          width: '100%',
+          position: 'absolute',
+          top: SCREEN_HEIGHT,
+          backgroundColor: cardColor,
+          borderTopLeftRadius: BORDER_RADIUS,
+          borderTopRightRadius: BORDER_RADIUS,
+        },
+        rBottomSheetStyle,
+        style,
+      ]}
+    >
+      {/* Handle */}
+      <View
+        style={{
+          width: 64,
+          height: 6,
+          backgroundColor: mutedColor,
+          alignSelf: 'center',
+          marginTop: 8,
+          borderRadius: 999,
+        }}
+      />
+
+      {/* Title */}
+      {title && (
+        <View
+          style={{
+            marginHorizontal: 16,
+            marginTop: 16,
+            paddingBottom: 8,
+          }}
+        >
+          <Text variant='title' style={{ textAlign: 'center' }}>
+            {title}
+          </Text>
+        </View>
+      )}
+
+      {/* Content */}
+      <View style={{ flex: 1, padding: 16 }}>{children}</View>
+    </Animated.View>
+  );
+};
+
 type BottomSheetProps = {
   isVisible: boolean;
   onClose: () => void;
@@ -33,6 +100,7 @@ type BottomSheetProps = {
   enableBackdropDismiss?: boolean;
   title?: string;
   style?: ViewStyle;
+  disablePanGesture?: boolean;
 };
 
 export function BottomSheet({
@@ -43,6 +111,7 @@ export function BottomSheet({
   enableBackdropDismiss = true,
   title,
   style,
+  disablePanGesture = false,
 }: BottomSheetProps) {
   const cardColor = useThemeColor({}, 'card');
   const mutedColor = useThemeColor({}, 'muted');
@@ -124,8 +193,11 @@ export function BottomSheet({
     })
     .onUpdate((event) => {
       const newY = context.value.y + event.translationY;
-      // Limit the dragging range
-      if (newY <= 0 && newY >= MAX_TRANSLATE_Y) {
+      // Only allow dragging down when near the top of the sheet or when dragging up
+      // This helps prevent interference with nested ScrollViews
+      const shouldUpdate = event.translationY > 0 || translateY.value > -SCREEN_HEIGHT * 0.1;
+      
+      if (shouldUpdate && newY <= 0 && newY >= MAX_TRANSLATE_Y) {
         translateY.value = newY;
       }
     })
@@ -142,7 +214,8 @@ export function BottomSheet({
       // Find the closest snap point
       const closestSnapPoint = findClosestSnapPoint(currentY);
       scrollTo(closestSnapPoint);
-    });
+    })
+    .simultaneousWithExternalGesture();
 
   const rBottomSheetStyle = useAnimatedStyle(() => {
     return {
@@ -185,53 +258,27 @@ export function BottomSheet({
             <Animated.View style={{ flex: 1 }} />
           </TouchableWithoutFeedback>
 
-          <GestureDetector gesture={gesture}>
-            <Animated.View
-              style={[
-                {
-                  height: SCREEN_HEIGHT,
-                  width: '100%',
-                  position: 'absolute',
-                  top: SCREEN_HEIGHT,
-                  backgroundColor: cardColor,
-                  borderTopLeftRadius: BORDER_RADIUS,
-                  borderTopRightRadius: BORDER_RADIUS,
-                },
-                rBottomSheetStyle,
-                style,
-              ]}
-            >
-              {/* Handle */}
-              <View
-                style={{
-                  width: 64,
-                  height: 6,
-                  backgroundColor: mutedColor,
-                  alignSelf: 'center',
-                  marginTop: 8,
-                  borderRadius: 999,
-                }}
+          {disablePanGesture ? (
+            <BottomSheetContent
+              children={children}
+              title={title}
+              style={style}
+              rBottomSheetStyle={rBottomSheetStyle}
+              cardColor={cardColor}
+              mutedColor={mutedColor}
+            />
+          ) : (
+            <GestureDetector gesture={gesture}>
+              <BottomSheetContent
+                children={children}
+                title={title}
+                style={style}
+                rBottomSheetStyle={rBottomSheetStyle}
+                cardColor={cardColor}
+                mutedColor={mutedColor}
               />
-
-              {/* Title */}
-              {title && (
-                <View
-                  style={{
-                    marginHorizontal: 16,
-                    marginTop: 16,
-                    paddingBottom: 8,
-                  }}
-                >
-                  <Text variant='title' style={{ textAlign: 'center' }}>
-                    {title}
-                  </Text>
-                </View>
-              )}
-
-              {/* Content */}
-              <View style={{ flex: 1, padding: 16 }}>{children}</View>
-            </Animated.View>
-          </GestureDetector>
+            </GestureDetector>
+          )}
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>
