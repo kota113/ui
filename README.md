@@ -127,14 +127,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 💬 **Linkedin**: [@ahmedbna](https://www.linkedin.com/in/ahmedbna/)
 - 𝕏 : [@ahmedbnaa](https://x.com/ahmedbnaa)
 
-## 🙏 Contributors
-
-Thanks to all our amazing contributors!
-
-<a href="https://github.com/ahmedbna/bna-ui/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ahmedbna/bna-ui" />
-</a>
-
 ## ⭐ Support
 
 If you find BNA UI helpful, please consider giving it a star on GitHub! It helps us a lot.
