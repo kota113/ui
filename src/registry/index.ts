@@ -56,6 +56,7 @@ import { themeRegistry } from './theme/index.js';
 import { hooksRegistry } from './hooks/index.js';
 import { inputRegistry } from './input.js';
 import { chartsRegistry } from './charts/index.js';
+import { avoidKeyboardRegistry } from './avoid-keyboard.js';
 
 export const REGISTRY: Record<string, ComponentRegistry> = {
   ...accordionRegistry,
@@ -65,6 +66,7 @@ export const REGISTRY: Record<string, ComponentRegistry> = {
   ...audioRecorderRegistry,
   ...audioWaveformRegistry,
   ...avatarRegistry,
+  ...avoidKeyboardRegistry,
   ...badgeRegistry,
   ...bottomSheetRegistry,
   ...buttonRegistry,
