@@ -5,7 +5,7 @@ import React, {useEffect} from 'react';
 import {Modal, StyleSheet, TouchableWithoutFeedback, View, ViewStyle} from 'react-native';
 import Animated, {runOnJS, useAnimatedStyle, useSharedValue, withTiming} from 'react-native-reanimated';
 
-export type DialogProps = {
+export type AlertDialogProps = {
   isVisible: boolean;
   onClose: () => void;
   title?: string;
@@ -20,7 +20,7 @@ export type DialogProps = {
 };
 
 // A simple card-like dialog overlay with fade-in animation similar to BottomSheet's backdrop
-export function Dialog({
+export function AlertDialog({
                          isVisible,
                          onClose,
                          title,
@@ -32,7 +32,7 @@ export function Dialog({
                          onCancel,
                          dismissible = true,
                          style,
-                       }: DialogProps) {
+                       }: AlertDialogProps) {
   const cardColor = useThemeColor({}, 'card');
 
   const [modalVisible, setModalVisible] = React.useState(false);
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function useDialog() {
+export function useAlertDialog() {
   const [isVisible, setIsVisible] = React.useState(false);
   const open = React.useCallback(() => setIsVisible(true), []);
   const close = React.useCallback(() => setIsVisible(false), []);

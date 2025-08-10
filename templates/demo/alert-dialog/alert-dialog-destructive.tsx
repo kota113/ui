@@ -1,10 +1,10 @@
 import React from 'react';
-import { Dialog, useDialog } from '@/components/ui/alert-dialog';
+import { AlertDialog, useAlertDialog } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { View } from '@/components/ui/view';
 
 export default function AlertDialogDestructiveDemo() {
-  const dialog = useDialog();
+  const dialog = useAlertDialog();
 
   return (
     <View style={{ padding: 20 }}>
@@ -12,7 +12,7 @@ export default function AlertDialogDestructiveDemo() {
         Delete Item
       </Button>
 
-      <Dialog
+      <AlertDialog
         isVisible={dialog.isVisible}
         onClose={dialog.close}
         title="Delete Item"

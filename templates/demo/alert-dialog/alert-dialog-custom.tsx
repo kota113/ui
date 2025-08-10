@@ -1,11 +1,11 @@
 import React from 'react';
-import { Dialog, useDialog } from '@/components/ui/alert-dialog';
+import { AlertDialog, useAlertDialog } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { View } from '@/components/ui/view';
 import { Text } from '@/components/ui/text';
 
 export default function AlertDialogCustomDemo() {
-  const dialog = useDialog();
+  const dialog = useAlertDialog();
 
   return (
     <View style={{ padding: 20 }}>
@@ -13,7 +13,7 @@ export default function AlertDialogCustomDemo() {
         Custom Dialog
       </Button>
 
-      <Dialog
+      <AlertDialog
         isVisible={dialog.isVisible}
         onClose={dialog.close}
         confirmText="Continue"
@@ -33,7 +33,7 @@ export default function AlertDialogCustomDemo() {
             This dialog contains custom content instead of using the title and description props.
           </Text>
         </View>
-      </Dialog>
+      </AlertDialog>
     </View>
   );
 }
