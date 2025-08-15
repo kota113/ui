@@ -21,9 +21,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import {useSafeAreaInsets} from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
 
 type BottomSheetContentProps = {
   children: React.ReactNode;
@@ -33,6 +33,8 @@ type BottomSheetContentProps = {
   cardColor: string;
   mutedColor: string;
   onHandlePress?: () => void;
+  onContentLayout?: (height: number) => void;
+  autoHeight?: boolean;
 };
 
 // Component for the bottom sheet content
@@ -44,12 +46,14 @@ const BottomSheetContent = ({
   cardColor,
   mutedColor,
   onHandlePress,
+  onContentLayout,
+  autoHeight = false,
 }: BottomSheetContentProps) => {
   return (
     <Animated.View
       style={[
         {
-          height: SCREEN_HEIGHT,
+          height: autoHeight ? undefined : SCREEN_HEIGHT,
           width: '100%',
           position: 'absolute',
           top: SCREEN_HEIGHT,
@@ -60,6 +64,10 @@ const BottomSheetContent = ({
         rBottomSheetStyle,
         style,
       ]}
+      onLayout={autoHeight ? (event) => {
+        const {height} = event.nativeEvent.layout;
+        onContentLayout?.(height);
+      } : undefined}
     >
       {/* Handle - Touchable to allow snapping when pan is disabled */}
       <TouchableWithoutFeedback onPress={onHandlePress}>
@@ -97,7 +105,7 @@ const BottomSheetContent = ({
       )}
 
       {/* Content */}
-      <View style={{ flex: 1, padding: 16 }}>{children}</View>
+      <View style={{ flex: autoHeight ? 0 : 1, padding: 16 }}>{children}</View>
     </Animated.View>
   );
 };
@@ -111,6 +119,7 @@ type BottomSheetProps = {
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
+  autoHeight?: boolean;
 };
 
 export function BottomSheet({
@@ -122,32 +131,61 @@ export function BottomSheet({
   title,
   style,
   disablePanGesture = false,
+  autoHeight = false,
 }: BottomSheetProps) {
+  if (autoHeight) disablePanGesture = true;
   const cardColor = useThemeColor({}, 'card');
   const mutedColor = useThemeColor({}, 'muted');
 
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(SCREEN_HEIGHT);
   const context = useSharedValue({ y: 0 });
   const opacity = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
 
-  // Convert snap points to actual heights
-  const snapPointsHeights = snapPoints.map((point) => -SCREEN_HEIGHT * point);
-  const defaultHeight = snapPointsHeights[0];
+  const insets = useSafeAreaInsets();
+  const verticalInset = insets.top - insets.bottom;
+  const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + verticalInset;
+
+  // State for auto height functionality
+  const contentReadyRef = React.useRef(!autoHeight);
+  const firstRenderRef = React.useRef(true);
+  const [contentHeight, setContentHeight] = React.useState(0);
+  const [snapPointsHeights, setSnapPointsHeights] = React.useState<number[]>(
+    autoHeight ? [verticalInset] : snapPoints.map((point) => -SCREEN_HEIGHT * point)
+  );
 
   // Delayed modal close to allow animation to complete
   const [modalVisible, setModalVisible] = React.useState(false);
 
+  // Handle content height measurement and update snap points
+  useEffect(() => {
+    if (autoHeight && contentHeight > 0) {
+      const newSnapPointsHeights = [-contentHeight + verticalInset]; // Add some padding for handle and title
+      setSnapPointsHeights(newSnapPointsHeights);
+      contentReadyRef.current = true;
+    }
+  }, [autoHeight, contentHeight]);
+
+  // Handle animations when visibility changes or content is ready
   useEffect(() => {
     if (isVisible) {
+      // Set initial position to bottom of screen before showing modal
+      if ((autoHeight && firstRenderRef.current) || !autoHeight) {
+        translateY.value = SCREEN_HEIGHT;
+        firstRenderRef.current = false;
+      }
       setModalVisible(true);
-      translateY.value = withSpring(defaultHeight, {
-        damping: 50,
-        stiffness: 400,
-      });
-      opacity.value = withTiming(1, { duration: 300 });
-      // Reset to first snap point when opening
-      currentSnapIndex.value = 0;
+      // Wait for content to be ready before starting animations
+      if (contentReadyRef.current) {
+        const defaultHeight = snapPointsHeights[0];
+        translateY.value = withSpring(defaultHeight, {
+          damping: 50,
+          stiffness: 400,
+        });
+        opacity.value = withTiming(1, {duration: 300});
+        // Reset to first snap point when opening
+        currentSnapIndex.value = 0;
+      }
     } else {
       // Animate slide down before closing modal
       translateY.value = withSpring(0, {
@@ -159,8 +197,14 @@ export function BottomSheet({
           runOnJS(setModalVisible)(false);
         }
       });
+      if (autoHeight) {
+        // Reset state when closing
+        firstRenderRef.current = true;
+        setContentHeight(0);
+        contentReadyRef.current = false;
+      }
     }
-  }, [isVisible, defaultHeight]);
+  }, [isVisible, snapPointsHeights, contentReadyRef.current]);
 
   const scrollTo = (destination: number) => {
     'worklet';
@@ -193,16 +237,21 @@ export function BottomSheet({
 
   // Function to cycle through snap points when handle is pressed
   const handlePress = () => {
-    // Move to the next snap point (cycle back to first if at the end)
-    const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
-    currentSnapIndex.value = nextIndex;
-    scrollTo(snapPointsHeights[nextIndex]);
+    if (autoHeight) {
+      // In auto height mode, handle press closes the sheet
+      animateClose();
+    } else {
+      // Move to the next snap point (cycle back to first if at the end)
+      const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
+      currentSnapIndex.value = nextIndex;
+      scrollTo(snapPointsHeights[nextIndex]);
+    }
   };
 
   const animateClose = () => {
     'worklet';
     // Animate to slide down position
-    translateY.value = withSpring(0, {
+    translateY.value = withSpring(SCREEN_HEIGHT, {
       damping: 50,
       stiffness: 400,
     });
@@ -234,9 +283,19 @@ export function BottomSheet({
         return;
       }
 
-      // Find the closest snap point
-      const closestSnapPoint = findClosestSnapPoint(currentY);
-      scrollTo(closestSnapPoint);
+      if (autoHeight) {
+        // In auto height mode, only snap back to content height or close
+        const defaultHeight = snapPointsHeights[0];
+        if (currentY > defaultHeight / 2) {
+          animateClose();
+        } else {
+          scrollTo(defaultHeight);
+        }
+      } else {
+        // Find the closest snap point
+        const closestSnapPoint = findClosestSnapPoint(currentY);
+        scrollTo(closestSnapPoint);
+      }
     });
 
   const rBottomSheetStyle = useAnimatedStyle(() => {
@@ -258,6 +317,10 @@ export function BottomSheet({
     }
   };
 
+  const handleContentLayout = (height: number) => {
+    setContentHeight(height);
+  };
+
   return (
     <Modal
       visible={modalVisible}
@@ -277,7 +340,7 @@ export function BottomSheet({
           ]}
         >
           <TouchableWithoutFeedback onPress={handleBackdropPress}>
-            <Animated.View style={{ flex: 1 }} />
+            <Animated.View style={{ flex: 1 }}/>
           </TouchableWithoutFeedback>
 
           {disablePanGesture ? (
@@ -289,6 +352,8 @@ export function BottomSheet({
               cardColor={cardColor}
               mutedColor={mutedColor}
               onHandlePress={() => runOnJS(handlePress)()}
+              autoHeight={autoHeight}
+              onContentLayout={handleContentLayout}
             />
           ) : (
             <GestureDetector gesture={gesture}>
@@ -300,6 +365,8 @@ export function BottomSheet({
                 cardColor={cardColor}
                 mutedColor={mutedColor}
                 onHandlePress={() => runOnJS(handlePress)()}
+                autoHeight={autoHeight}
+                onContentLayout={handleContentLayout}
               />
             </GestureDetector>
           )}
