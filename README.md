@@ -1,5 +1,5 @@
 ## Fork by kota113  
-This fork includes enhancements that have not yet been merged into the upstream repository. 
+This fork includes enhancements that have not yet been merged into the upstream repository.   
 Please see the [Pull Requests](https://github.com/kota113/ui/pulls?q=is%3Apr) for details.
 
 ---
