@@ -16,6 +16,7 @@ export type AlertDialogProps = {
   onConfirm?: () => void;
   onCancel?: () => void;
   dismissible?: boolean;
+  showCancelButton?: boolean;
   style?: ViewStyle;
 };
 
@@ -31,6 +32,7 @@ export function AlertDialog({
                          onConfirm,
                          onCancel,
                          dismissible = true,
+                         showCancelButton = true,
                          style,
                        }: AlertDialogProps) {
   const cardColor = useThemeColor({}, 'card');
@@ -129,9 +131,11 @@ export function AlertDialog({
               )}
               {children ? <CardContent>{children}</CardContent> : null}
               <CardFooter>
-                <Button variant='outline' onPress={handleCancel}>
-                  {cancelText}
-                </Button>
+                {showCancelButton && (
+                  <Button variant='outline' onPress={handleCancel}>
+                    {cancelText}
+                  </Button>
+                )}
                 <Button style={{flex: 1}} onPress={handleConfirm}>
                   {confirmText}
                 </Button>
