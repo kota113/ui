@@ -3,25 +3,10 @@ import { View } from '@/components/ui/view';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { BORDER_RADIUS } from '@/theme/globals';
 import React, { useEffect } from 'react';
-import {
-  Dimensions,
-  Modal,
-  TouchableWithoutFeedback,
-  ViewStyle,
-} from 'react-native';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { Dimensions, Modal, TouchableWithoutFeedback, ViewStyle } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -143,15 +128,16 @@ export function BottomSheet({
   const currentSnapIndex = useSharedValue(0);
 
   const insets = useSafeAreaInsets();
-  const verticalInset = insets.top - insets.bottom;
-  const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + verticalInset;
+  const topInset = insets.top;
+  const bottomInset = insets.bottom;
+  const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + topInset;
 
   // State for auto height functionality
   const contentReadyRef = React.useRef(!autoHeight);
   const firstRenderRef = React.useRef(true);
   const [contentHeight, setContentHeight] = React.useState(0);
   const [snapPointsHeights, setSnapPointsHeights] = React.useState<number[]>(
-    autoHeight ? [verticalInset] : snapPoints.map((point) => -SCREEN_HEIGHT * point)
+    autoHeight ? [0] : snapPoints.map((point) => -SCREEN_HEIGHT * point)
   );
 
   // Delayed modal close to allow animation to complete
@@ -160,11 +146,11 @@ export function BottomSheet({
   // Handle content height measurement and update snap points
   useEffect(() => {
     if (autoHeight && contentHeight > 0) {
-      const newSnapPointsHeights = [-contentHeight + verticalInset]; // Add some padding for handle and title
+      const newSnapPointsHeights = [-contentHeight - bottomInset];
       setSnapPointsHeights(newSnapPointsHeights);
       contentReadyRef.current = true;
     }
-  }, [autoHeight, contentHeight]);
+  }, [autoHeight, contentHeight, bottomInset]);
 
   // Handle animations when visibility changes or content is ready
   useEffect(() => {
