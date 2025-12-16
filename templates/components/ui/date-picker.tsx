@@ -1092,7 +1092,7 @@ export function DatePicker(props: DatePickerProps) {
           setShowYearPicker(false);
         }}
         title={getBottomSheetTitle()}
-        autoHeight={true}
+        snapPoints={`fit`}
         disablePanGesture={showMonthPicker || showYearPicker}
       >
         <View style={{ flex: 1 }}>

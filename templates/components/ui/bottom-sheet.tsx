@@ -34,26 +34,26 @@ type BottomSheetContentProps = {
   mutedColor: string;
   onHandlePress?: () => void;
   onContentLayout?: (height: number) => void;
-  autoHeight?: boolean;
+  fit?: boolean;
 };
 
 // Component for the bottom sheet content
 const BottomSheetContent = ({
-  children,
-  title,
-  style,
-  rBottomSheetStyle,
-  cardColor,
-  mutedColor,
-  onHandlePress,
-  onContentLayout,
-  autoHeight = false,
-}: BottomSheetContentProps) => {
+                              children,
+                              title,
+                              style,
+                              rBottomSheetStyle,
+                              cardColor,
+                              mutedColor,
+                              onHandlePress,
+                              onContentLayout,
+                              fit = false,
+                            }: BottomSheetContentProps) => {
   return (
     <Animated.View
       style={[
         {
-          height: autoHeight ? undefined : SCREEN_HEIGHT,
+          height: fit ? undefined : SCREEN_HEIGHT,
           width: '100%',
           position: 'absolute',
           top: SCREEN_HEIGHT,
@@ -64,7 +64,7 @@ const BottomSheetContent = ({
         rBottomSheetStyle,
         style,
       ]}
-      onLayout={autoHeight ? (event) => {
+      onLayout={fit ? (event) => {
         const {height} = event.nativeEvent.layout;
         onContentLayout?.(height);
       } : undefined}
@@ -105,7 +105,7 @@ const BottomSheetContent = ({
       )}
 
       {/* Content */}
-      <View style={{ flex: autoHeight ? 0 : 1, padding: 16 }}>{children}</View>
+      <View style={{ flex: fit ? 0 : 1, padding: 16 }}>{children}</View>
     </Animated.View>
   );
 };
@@ -114,26 +114,28 @@ type BottomSheetProps = {
   isVisible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  snapPoints?: number[];
+  snapPoints?: number[] | ['fit'];
   enableBackdropDismiss?: boolean;
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
-  autoHeight?: boolean;
 };
 
 export function BottomSheet({
-  isVisible,
-  onClose,
-  children,
-  snapPoints = [0.3, 0.6, 0.9],
-  enableBackdropDismiss = true,
-  title,
-  style,
-  disablePanGesture = false,
-  autoHeight = false,
-}: BottomSheetProps) {
-  if (autoHeight) disablePanGesture = true;
+                              isVisible,
+                              onClose,
+                              children,
+                              snapPoints = [0.3, 0.6, 0.9],
+                              enableBackdropDismiss = true,
+                              title,
+                              style,
+                              disablePanGesture = false,
+                            }: BottomSheetProps) {
+  const isAuto: boolean = React.useMemo(
+    () => snapPoints.length === 1 && snapPoints[0] === 'fit',
+    [snapPoints]
+  );
+  if (isAuto) disablePanGesture = true;
   const cardColor = useThemeColor({}, 'card');
   const mutedColor = useThemeColor({}, 'muted');
 
@@ -146,12 +148,14 @@ export function BottomSheet({
   const verticalInset = insets.top - insets.bottom;
   const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + verticalInset;
 
-  // State for auto height functionality
-  const contentReadyRef = React.useRef(!autoHeight);
+  // State for fit (auto height) functionality
+  const contentReadyRef = React.useRef(!isAuto);
   const firstRenderRef = React.useRef(true);
   const [contentHeight, setContentHeight] = React.useState(0);
   const [snapPointsHeights, setSnapPointsHeights] = React.useState<number[]>(
-    autoHeight ? [verticalInset] : snapPoints.map((point) => -SCREEN_HEIGHT * point)
+    // when isAuto is false, snapPoints is an array of numbers
+    isAuto ? [verticalInset] : (snapPoints as number[])
+      .map((point) => -SCREEN_HEIGHT * point)
   );
 
   // Delayed modal close to allow animation to complete
@@ -159,18 +163,18 @@ export function BottomSheet({
 
   // Handle content height measurement and update snap points
   useEffect(() => {
-    if (autoHeight && contentHeight > 0) {
+    if (isAuto && contentHeight > 0) {
       const newSnapPointsHeights = [-contentHeight + verticalInset]; // Add some padding for handle and title
       setSnapPointsHeights(newSnapPointsHeights);
       contentReadyRef.current = true;
     }
-  }, [autoHeight, contentHeight]);
+  }, [isAuto, contentHeight]);
 
   // Handle animations when visibility changes or content is ready
   useEffect(() => {
     if (isVisible) {
       // Set initial position to bottom of screen before showing modal
-      if ((autoHeight && firstRenderRef.current) || !autoHeight) {
+      if ((isAuto && firstRenderRef.current) || !isAuto) {
         translateY.value = SCREEN_HEIGHT;
         firstRenderRef.current = false;
       }
@@ -197,7 +201,7 @@ export function BottomSheet({
           runOnJS(setModalVisible)(false);
         }
       });
-      if (autoHeight) {
+      if (isAuto) {
         // Reset state when closing
         firstRenderRef.current = true;
         setContentHeight(0);
@@ -237,7 +241,7 @@ export function BottomSheet({
 
   // Function to cycle through snap points when handle is pressed
   const handlePress = () => {
-    if (autoHeight) {
+    if (isAuto) {
       // In auto height mode, handle press closes the sheet
       animateClose();
     } else {
@@ -283,7 +287,7 @@ export function BottomSheet({
         return;
       }
 
-      if (autoHeight) {
+      if (isAuto) {
         // In auto height mode, only snap back to content height or close
         const defaultHeight = snapPointsHeights[0];
         if (currentY > defaultHeight / 2) {
@@ -352,7 +356,7 @@ export function BottomSheet({
               cardColor={cardColor}
               mutedColor={mutedColor}
               onHandlePress={() => runOnJS(handlePress)()}
-              autoHeight={autoHeight}
+              fit={isAuto}
               onContentLayout={handleContentLayout}
             />
           ) : (
@@ -365,7 +369,7 @@ export function BottomSheet({
                 cardColor={cardColor}
                 mutedColor={mutedColor}
                 onHandlePress={() => runOnJS(handlePress)()}
-                autoHeight={autoHeight}
+                fit={isAuto}
                 onContentLayout={handleContentLayout}
               />
             </GestureDetector>
